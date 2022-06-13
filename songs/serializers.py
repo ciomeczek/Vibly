@@ -6,7 +6,6 @@ from users.serializers import UserSerializer
 from .models import Song
 from .validators import HasExtension, IsAudio
 from vibly.img import reshape_and_save, get_renamed_filename
-from albums.serializers import AlbumSerializer
 
 
 class CreateSongSerializer(serializers.ModelSerializer):
@@ -38,7 +37,6 @@ class CreateSongSerializer(serializers.ModelSerializer):
 
 class SongSerializer(serializers.ModelSerializer):
     author = UserSerializer(read_only=True)
-    AlbumSerializer = AlbumSerializer(read_only=True)
 
     class Meta:
         model = Song
