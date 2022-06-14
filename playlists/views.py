@@ -22,6 +22,10 @@ class PlaylistsViewSet(viewsets.ModelViewSet):
 
     def retrieve(self, request, *args, **kwargs):
         playlist = self.get_object()
+
+        if playlist.author != request.user and not playlist.public:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+
         serializer = self.get_serializer(playlist)
         return Response(serializer.data)
 
@@ -43,9 +47,9 @@ class PlaylistsViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action == 'create' or self.action == 'partial_update':
-            permission_classes = [AllowAny]
-        else:
             permission_classes = [IsAuthenticated]
+        else:
+            permission_classes = [AllowAny]
         return [permission() for permission in permission_classes]
 
 

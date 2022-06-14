@@ -35,7 +35,7 @@ class PlaylistSongSerializer(serializers.ModelSerializer):
             playlist = self.validated_data.get('playlist')
             self.validated_data['order'] = playlist.playlist_songs.count() + 1
 
-        playlist = self.validated_data.get('playlist') or self.instance.playlist
+        playlist = self.validated_data.get('playlist') or self.instance.album
         playlist_songs = playlist.playlist_songs.all()
 
         max_order = playlist_songs.aggregate(Max('order'))['order__max'] or 0

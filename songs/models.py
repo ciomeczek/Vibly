@@ -9,7 +9,6 @@ class Song(models.Model):
     duration = models.DurationField(blank=True, null=True)
     cover = models.ImageField(upload_to='songs/covers/', default='defaults/songs/default.png')
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    
 
     def delete(self, *args, **kwargs):
         self.song_file.delete()
