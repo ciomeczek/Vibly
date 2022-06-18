@@ -29,9 +29,8 @@ def remove_image(url, check_default=False, field=None):
             return
 
     try:
-        print(f'removing {url}')
         os.remove(url)
-    except FileNotFoundError:
+    except (FileNotFoundError, IsADirectoryError):
         pass
 
 
@@ -51,27 +50,33 @@ def resize(pil_img, width=128, height=128):
     return pil_img.resize((width, height), Image.ANTIALIAS)
 
 
-def save_image(pil_img, filename, field):
+def save_image(pil_img, filename, upload_to):
     # Create directory for image if it doesn't exist
-    directory = os.path.join(settings.MEDIA_ROOT, field.field.upload_to)
+    directory = os.path.join(settings.MEDIA_ROOT, upload_to)
     os.makedirs(directory, exist_ok=True)
 
-    url = os.path.join(settings.MEDIA_ROOT, field.field.upload_to, get_renamed_filename(filename))
+    url = os.path.join(settings.MEDIA_ROOT, upload_to, get_renamed_filename(filename))
     pil_img.save(url)
 
     return url.replace(settings.MEDIA_ROOT, '').replace('/', '', 1)
 
 
-def reshape_and_save(file, filename, field, width=128, height=128, delete_old=False):
-    old_url = field.instance.__getattribute__(field.field.name).name
+def reshape_and_return_url(file, filename, upload_to, width=128, height=128, delete_old=False, field=None):
     pil_img = image_to_pillow(file)
     pil_img = crop_max_square(pil_img)
     pil_img = resize(pil_img, width, height)
-    url = save_image(pil_img, filename, field)
+    url = save_image(pil_img, filename, upload_to)
     django_file = default_storage.open(url)
 
-    field.instance.cover = django_file.name.replace(settings.MEDIA_ROOT, '').replace('/', '', 1)
-    field.instance.save()
-
     if delete_old:
-        remove_image(old_url, check_default=True, field=field)
+        if field is not None:
+            delete_image(field)
+
+    return django_file.name.replace(settings.MEDIA_ROOT, '').replace('/', '', 1)
+
+
+def delete_image(field):
+    try:
+        remove_image(field.url, check_default=True, field=field)
+    except ValueError:
+        pass

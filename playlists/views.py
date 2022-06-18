@@ -5,7 +5,6 @@ from django.shortcuts import get_object_or_404
 
 from .models import Playlist, PlaylistSong
 from .serializers import PlaylistSerializer, \
-    CreatePlaylistSerializer, \
     PlaylistSongSerializer, \
     CreatePlaylistSongSerializer
 
@@ -13,6 +12,7 @@ from .serializers import PlaylistSerializer, \
 class PlaylistsViewSet(viewsets.ModelViewSet):
     lookup_field = 'pk'
     queryset = Playlist.objects.all()
+    serializer_class = PlaylistSerializer
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -40,10 +40,14 @@ class PlaylistsViewSet(viewsets.ModelViewSet):
         self.perform_update(serializer)
         return Response(serializer.data)
 
-    def get_serializer_class(self):
-        if self.action == 'create':
-            return CreatePlaylistSerializer
-        return PlaylistSerializer
+    def destroy(self, request, *args, **kwargs):
+        playlist = self.get_object()
+
+        if playlist.author != request.user:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+
+        self.perform_destroy(playlist)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get_permissions(self):
         if self.action == 'create' or self.action == 'partial_update':
@@ -61,12 +65,12 @@ class PlaylistSongsViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         playlist = self.get_playlist()
-        request.data['playlist'] = playlist.pk
 
         if playlist.author != request.user:
             return Response(status=status.HTTP_403_FORBIDDEN)
 
-        serializer = self.get_serializer(data=request.data)
+        serializer = self.get_serializer(data=request.data,
+                                         context=self.get_serializer_context() | {'playlist': playlist})
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         return Response(serializer.data)
@@ -74,12 +78,15 @@ class PlaylistSongsViewSet(viewsets.ModelViewSet):
     def partial_update(self, request, *args, **kwargs):
         playlist = self.get_playlist()
         playlist_song = self.get_playlist_song()
-        request.data['playlist'] = playlist.pk
 
         if playlist.author != request.user:
             return Response(status=status.HTTP_403_FORBIDDEN)
 
-        serializer = self.get_serializer(playlist_song, data=request.data, partial=True)
+        serializer = self.get_serializer(playlist_song,
+                                         data=request.data,
+                                         partial=True,
+                                         context=self.get_serializer_context() | {'playlist': playlist})
+
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         return Response(serializer.data)
@@ -109,6 +116,8 @@ class PlaylistSongsViewSet(viewsets.ModelViewSet):
     def get_playlist_song(self):
         playlist_song_pk_url = self.multiple_lookup_fields.get('playlist_song')
         playlist_song_pk = self.kwargs.get(playlist_song_pk_url)
-        playlist_song = get_object_or_404(self.playlist_song_queryset, order=playlist_song_pk)
+        playlist_song = get_object_or_404(self.playlist_song_queryset,
+                                          order=playlist_song_pk,
+                                          playlist=self.get_playlist())
         self.check_object_permissions(self.request, playlist_song)
         return playlist_song

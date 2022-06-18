@@ -1,7 +1,7 @@
 from django.contrib import admin
 
-from .models import Album, AlbumSong
+from .models import Album, AlbumPosition
 
 
 admin.site.register(Album)
-admin.site.register(AlbumSong)
+admin.site.register(AlbumPosition)

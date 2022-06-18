@@ -20,6 +20,10 @@ class SongViewSet(viewsets.ModelViewSet):
 
     def retrieve(self, request, *args, **kwargs):
         song = self.get_object()
+
+        if request.user != song.author and not song.public:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+
         serializer = self.get_serializer(song)
         return Response(serializer.data)
 

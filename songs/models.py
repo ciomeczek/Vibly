@@ -8,7 +8,14 @@ class Song(models.Model):
     song_file = models.FileField(upload_to='songs/files/')
     duration = models.DurationField(blank=True, null=True)
     cover = models.ImageField(upload_to='songs/covers/', default='defaults/songs/default.png')
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    public = models.BooleanField(default=True)
+    created_at = models.DateField(auto_now_add=True, editable=False)
+
+    @property
+    def album(self):
+        if hasattr(self, 'album_position'):
+            return self.album_position.album
+        return None
 
     def delete(self, *args, **kwargs):
         self.song_file.delete()

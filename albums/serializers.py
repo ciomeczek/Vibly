@@ -1,14 +1,14 @@
 from rest_framework import serializers
 from django.db.models import F, Max
 
-from .models import Album, AlbumSong
+from .models import Album, AlbumPosition
 from users.serializers import UserSerializer
 from songs.models import Song
 from songs.serializers import SongSerializer
-from vibly.img import reshape_and_save
+from vibly.img import reshape_and_return_url, delete_image
 
 
-class AlbumSongSerializer(serializers.ModelSerializer):
+class AlbumPositionSerializer(serializers.ModelSerializer):
     song = SongSerializer(read_only=True)
     song_pk = serializers.PrimaryKeyRelatedField(
         queryset=Song.objects.all(), source='song', write_only=True
@@ -17,89 +17,116 @@ class AlbumSongSerializer(serializers.ModelSerializer):
     order = serializers.IntegerField(required=False)
 
     class Meta:
-        model = AlbumSong
+        model = AlbumPosition
         fields = ['song', 'order', 'song_pk']
 
-    def is_valid(self, raise_exception=False):
-        album = Album.objects.get(pk=self.initial_data['album'])
+    def validate(self, attrs):
+        if attrs.get('song').author != self.context.get('request').user:
+            raise serializers.ValidationError({'song_pk': 'You can only add your songs to your album'})
 
-        if self.initial_data.get('order') is None:
-            self.initial_data['order'] = album.album_songs.count() + 1
+        return attrs
 
-        if self.initial_data.get('song_pk'):
-            song = Song.objects.get(pk=self.initial_data.get('song_pk'))
-            if song.author != album.author:
-                raise serializers.ValidationError({'song_pk': 'Song author does not match album author'})
-
-        return super().is_valid(raise_exception)
+    def validate_song_pk(self, song):
+        if song.album is not None:
+            raise serializers.ValidationError(f'{song.title} already belongs to an album')
+        return song
 
     def save(self, **kwargs):
         order = self.validated_data.get('order')
 
+        album = self.context.get('album')
+        self.validated_data['album'] = album
+
+        if album is None:
+            raise Exception('You must include album in context')
+
         if order is None:
-            album = self.validated_data.get('album')
-            self.validated_data['order'] = album.album_songs.count() + 1
+            order = album.album_positions.count() + 1
 
-        album = self.validated_data.get('album') or self.instance.album
-        album_songs = album.album_songs.all()
+        album_positions = album.album_positions.all()
 
-        max_order = album_songs.aggregate(Max('order'))['order__max'] or 0
+        max_order = album_positions.aggregate(Max('order'))['order__max'] or 0
         if order > max_order:
             self.validated_data['order'] = max_order + 1
 
-        if AlbumSong.objects.filter(album=album, order=order).exists():
-            songs_gte_order = album_songs.filter(order__gte=order)
+        if AlbumPosition.objects.filter(album=album, order=order).exists():
+            songs_gte_order = album_positions.filter(order__gte=order)
             songs_gte_order.update(order=F('order') + 1)
 
         return super().save(**kwargs)
 
 
-class CreateAlbumSongSerializer(AlbumSongSerializer):
-    class Meta(AlbumSongSerializer.Meta):
-        fields = ['album', 'song', 'order', 'song_pk']
+class CreateAlbumPositionListSerializer(serializers.ListSerializer):
+    def is_valid(self, raise_exception=False):
+        errors = []
+        for data in self.initial_data:
+            serializer = self.child.__class__(data=data, context=self.context)
+            serializer.is_valid(raise_exception=False)
+            if serializer.errors:
+                errors.append(serializer.errors)
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        return super().is_valid(raise_exception)
+
+    def save(self, **kwargs):
+        result = []
+        for data in self.validated_data:
+            new_data = {'song_pk': data.get('song').pk}
+
+            serializer = self.child.__class__(data=new_data, context=self.context)
+            serializer.is_valid(raise_exception=True)
+            serializer.save(**kwargs)
+            result.append(serializer.instance)
+
+        return result
+
+
+class CreateAlbumPositionSerializer(AlbumPositionSerializer):
+    class Meta(AlbumPositionSerializer.Meta):
+        list_serializer_class = CreateAlbumPositionListSerializer
+        fields = ['song', 'order', 'song_pk']
         extra_kwargs = {
-            'album': {'write_only': True},
             'song_pk': {'write_only': True}
         }
 
 
-class CreateAlbumSerializer(serializers.ModelSerializer):
-    album_songs = AlbumSongSerializer(many=True, read_only=False, required=False)
+class AlbumSerializer(serializers.ModelSerializer):
     author = UserSerializer(read_only=True)
+    album_positions = AlbumPositionSerializer(many=True, required=False)
 
     class Meta:
         model = Album
         fields = '__all__'
-        read_only_fields = ['author']
 
-    def create(self, validated_data):
-        album_songs = validated_data.pop('album_songs', None)
-        validated_data['author'] = self.context.get('request').user
+    def save(self, **kwargs):
+        album_positions = self.validated_data.pop('album_positions', None)
+        self.validated_data['author'] = self.context.get('request').user
 
-        cover = validated_data.pop('cover', None)
+        cover = self.validated_data.pop('cover', None)
 
-        album = Album.objects.create(**validated_data)
+        self.instance = self.instance or Album.objects.create(**self.validated_data)
 
         if cover:
-            reshape_and_save(cover, cover.name, album.cover, height=512, width=512, delete_old=True)
+            if self.instance:
+                delete_image(self.instance.pfp)
 
-        if album_songs is not None:
-            for album_song in album_songs:
-                album_song['album'] = album.pk
-                album_song['song_pk'] = album_song.pop('song').pk
+            self.validated_data['cover'] = reshape_and_return_url(cover,
+                                                                  cover.name,
+                                                                  self.Meta.model.cover.field.upload_to,
+                                                                  height=128,
+                                                                  width=128)
 
-                serializer = CreateAlbumSongSerializer(data=album_song, context=self.context)
-                serializer.is_valid(raise_exception=True)
-                serializer.save()
+        if album_positions is not None:
+            for album_position in album_positions:
+                album_position['album_pk'] = self.instance.pk
+                album_position['song_pk'] = album_position.pop('song').pk
 
-        return album
+            serializer = CreateAlbumPositionSerializer(data=album_positions,
+                                                       context=self.context | {'album': self.instance},
+                                                       many=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
 
-
-class AlbumSerializer(serializers.ModelSerializer):
-    album_songs = AlbumSongSerializer(many=True, read_only=False)
-    author = UserSerializer(read_only=True)
-
-    class Meta:
-        model = Album
-        fields = '__all__'
-        read_only_fields = ['author']
+        return self.instance

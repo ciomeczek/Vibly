@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.db.models import F
 
 from songs.models import Song
 
@@ -13,16 +14,22 @@ class Album(models.Model):
     created_at = models.DateField(auto_now_add=True, editable=False)
 
     def __str__(self):
-        return self.title
+        return f'{self.title} - ({self.id})'
 
 
-class AlbumSong(models.Model):
-    album = models.ForeignKey(Album, on_delete=models.CASCADE, related_name='album_songs')
-    song = models.ForeignKey(Song, on_delete=models.CASCADE)
+class AlbumPosition(models.Model):
+    album = models.ForeignKey(Album, on_delete=models.CASCADE, related_name='album_positions', editable=False)
     order = models.IntegerField(default=0)
+    song = models.OneToOneField(Song, on_delete=models.CASCADE, related_name='album_position', editable=False)
 
     class Meta:
         ordering = ['order']
 
     def __str__(self):
-        return f'{self.album.name} - {self.song.title} - {self.order}'
+        return f'{self.album.title} - {self.song.title} - {self.order}'
+
+    def delete(self, *args, **kwargs):
+        album_positions = self.album.album_positions.all()
+        album_positions_gte_order = album_positions.filter(order__gte=self.order)
+        album_positions_gte_order.update(order=F('order') - 1)
+        super().delete(*args, **kwargs)
