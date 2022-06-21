@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404
 
 from .models import Playlist, PlaylistSong
 from .serializers import PlaylistSerializer, \
+    CreatePlaylistSerializer, \
     PlaylistSongSerializer, \
     CreatePlaylistSongSerializer
 
@@ -12,7 +13,6 @@ from .serializers import PlaylistSerializer, \
 class PlaylistsViewSet(viewsets.ModelViewSet):
     lookup_field = 'pk'
     queryset = Playlist.objects.all()
-    serializer_class = PlaylistSerializer
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -49,6 +49,11 @@ class PlaylistsViewSet(viewsets.ModelViewSet):
         self.perform_destroy(playlist)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return CreatePlaylistSerializer
+        return PlaylistSerializer
+
     def get_permissions(self):
         if self.action == 'create' or self.action == 'partial_update':
             permission_classes = [IsAuthenticated]
@@ -73,7 +78,7 @@ class PlaylistSongsViewSet(viewsets.ModelViewSet):
                                          context=self.get_serializer_context() | {'playlist': playlist})
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def partial_update(self, request, *args, **kwargs):
         playlist = self.get_playlist()

@@ -12,7 +12,6 @@ class SongViewSet(viewsets.ModelViewSet):
     serializer_class = SongSerializer
 
     def create(self, request, *args, **kwargs):
-        request.data['author'] = request.user
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)

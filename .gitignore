@@ -96,5 +96,6 @@ Control.system-ca-bundle
 GitHub.sublime-settings
 
 # Media except of defaults #
-media/
-!media/defaults/
+media/**
+!media/defaults
+!media/defaults/**

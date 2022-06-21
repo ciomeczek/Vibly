@@ -11,7 +11,7 @@ from vibly.img import reshape_and_return_url, delete_image
 class AlbumPositionSerializer(serializers.ModelSerializer):
     song = SongSerializer(read_only=True)
     song_pk = serializers.PrimaryKeyRelatedField(
-        queryset=Song.objects.all(), source='song', write_only=True
+        source='song', read_only=True
     )
 
     order = serializers.IntegerField(required=False)
@@ -19,8 +19,12 @@ class AlbumPositionSerializer(serializers.ModelSerializer):
     class Meta:
         model = AlbumPosition
         fields = ['song', 'order', 'song_pk']
+        read_only_fields = ['song', 'song_pk']
 
     def validate(self, attrs):
+        if self.instance is not None:
+            return attrs
+
         if attrs.get('song').author != self.context.get('request').user:
             raise serializers.ValidationError({'song_pk': 'You can only add your songs to your album'})
 
@@ -40,20 +44,47 @@ class AlbumPositionSerializer(serializers.ModelSerializer):
         if album is None:
             raise Exception('You must include album in context')
 
+        album_positions = album.album_positions.all()
+        max_order = (album_positions.aggregate(Max('order'))['order__max'] or 0) + 1
+
         if order is None:
-            order = album.album_positions.count() + 1
+            order = self.instance.order if self.instance is not None else max_order
+        else:
+            # clamp between 1 and max_order
+            order = max(min(order, max_order), 1)
+
+        self.validated_data['order'] = order
+        self.validated_data['album'] = album
+
+        return super().save(**kwargs)
+
+    def create(self, validated_data):
+        order = validated_data.get('order')
+        album = validated_data.get('album')
 
         album_positions = album.album_positions.all()
-
-        max_order = album_positions.aggregate(Max('order'))['order__max'] or 0
-        if order > max_order:
-            self.validated_data['order'] = max_order + 1
 
         if AlbumPosition.objects.filter(album=album, order=order).exists():
             songs_gte_order = album_positions.filter(order__gte=order)
             songs_gte_order.update(order=F('order') + 1)
 
-        return super().save(**kwargs)
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        order = validated_data.get('order')
+        album = validated_data.get('album')
+
+        album_positions = album.album_positions.all()
+
+        if AlbumPosition.objects.filter(album=album, order=order).exists():
+            if instance.order < order:
+                songs_query = album_positions.filter(order__lte=order, order__gt=instance.order)
+                songs_query.update(order=F('order') - 1)
+            elif instance.order > order:
+                songs_query = album_positions.filter(order__gte=order, order__lt=instance.order)
+                songs_query.update(order=F('order') + 1)
+
+        return super().update(instance, validated_data)
 
 
 class CreateAlbumPositionListSerializer(serializers.ListSerializer):
@@ -84,12 +115,13 @@ class CreateAlbumPositionListSerializer(serializers.ListSerializer):
 
 
 class CreateAlbumPositionSerializer(AlbumPositionSerializer):
+    song_pk = serializers.PrimaryKeyRelatedField(
+        queryset=Song.objects.all(), source='song', write_only=True
+    )
+
     class Meta(AlbumPositionSerializer.Meta):
         list_serializer_class = CreateAlbumPositionListSerializer
         fields = ['song', 'order', 'song_pk']
-        extra_kwargs = {
-            'song_pk': {'write_only': True}
-        }
 
 
 class AlbumSerializer(serializers.ModelSerializer):
@@ -98,34 +130,41 @@ class AlbumSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Album
-        fields = '__all__'
+        fields = ['id', 'title', 'author', 'description', 'cover', 'album_positions', 'created_at', 'public']
+        read_only_fields = ['author']
 
     def save(self, **kwargs):
-        album_positions = self.validated_data.pop('album_positions', None)
         self.validated_data['author'] = self.context.get('request').user
 
         cover = self.validated_data.pop('cover', None)
 
-        self.instance = self.instance or Album.objects.create(**self.validated_data)
-
         if cover:
             if self.instance:
-                delete_image(self.instance.pfp)
+                delete_image(self.instance.cover)
 
             self.validated_data['cover'] = reshape_and_return_url(cover,
                                                                   cover.name,
                                                                   self.Meta.model.cover.field.upload_to,
-                                                                  height=128,
-                                                                  width=128)
+                                                                  height=512,
+                                                                  width=512)
 
+        self.instance = self.instance or Album.objects.create(**self.validated_data)
+        return self.instance
+
+
+class CreateAlbumSerializer(AlbumSerializer):
+    album_positions = CreateAlbumPositionSerializer(many=True, required=False)
+
+    def save(self, **kwargs):
+        album_positions = self.validated_data.pop('album_positions', None)
+        super().save(**kwargs)
+
+        self.context['album'] = self.instance
         if album_positions is not None:
             for album_position in album_positions:
-                album_position['album_pk'] = self.instance.pk
                 album_position['song_pk'] = album_position.pop('song').pk
 
-            serializer = CreateAlbumPositionSerializer(data=album_positions,
-                                                       context=self.context | {'album': self.instance},
-                                                       many=True)
+            serializer = CreateAlbumPositionSerializer(data=album_positions, context=self.context, many=True)
             serializer.is_valid(raise_exception=True)
             serializer.save()
 

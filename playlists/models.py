@@ -16,6 +16,11 @@ class Playlist(models.Model):
     def __str__(self):
         return f'{self.title} ({self.pk})'
 
+    def delete(self, using=None, keep_parents=False):
+        if self.cover.name != self.cover.field.default:
+            self.cover.delete()
+        return super().delete(using, keep_parents)
+
 
 class PlaylistSong(models.Model):
     playlist = models.ForeignKey(Playlist, on_delete=models.CASCADE, related_name='playlist_songs', editable=False)
@@ -29,7 +34,9 @@ class PlaylistSong(models.Model):
         return f'{self.playlist.title} - {self.song.title} - {self.order}'
 
     def delete(self, *args, **kwargs):
-        playlist_songs = self.playlist.playlist_songs.all()
-        playlist_songs_gte_order = playlist_songs.filter(order__gte=self.order)
-        playlist_songs_gte_order.update(order=F('order') - 1)
+        if hasattr(self.playlist, 'playlist_songs'):
+            playlist_songs = self.playlist.playlist_songs.all()
+            playlist_songs_gte_order = playlist_songs.filter(order__gte=self.order)
+            playlist_songs_gte_order.update(order=F('order') - 1)
+
         super().delete(*args, **kwargs)

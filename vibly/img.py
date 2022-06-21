@@ -18,7 +18,6 @@ def get_renamed_filename(filename):
 def remove_image(url, check_default=False, field=None):
     # return if url is default image
     url = os.path.join(settings.MEDIA_ROOT, url.replace('/media/', ''))
-
     if check_default:
         if field is None:
             raise Exception('field is required if check_default is True')
@@ -72,6 +71,7 @@ def reshape_and_return_url(file, filename, upload_to, width=128, height=128, del
         if field is not None:
             delete_image(field)
 
+    remove_image(os.path.join(settings.MEDIA_URL, upload_to, filename))
     return django_file.name.replace(settings.MEDIA_ROOT, '').replace('/', '', 1)
 
 

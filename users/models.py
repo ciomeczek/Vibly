@@ -17,3 +17,8 @@ class CustomUser(AbstractUser):
 
     def __str__(self):
         return self.email
+
+    def delete(self, using=None, keep_parents=False):
+        if self.pfp.name != self.pfp.field.default:
+            self.pfp.delete()
+        return super().delete(using, keep_parents)

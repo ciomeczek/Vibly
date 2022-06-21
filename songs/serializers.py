@@ -27,19 +27,17 @@ class CreateSongSerializer(serializers.ModelSerializer):
         cover = self.validated_data.get('cover')
         self.validated_data.pop('cover', None)
 
-        song = super().save(**kwargs)
-
         if cover:
-            # reshape_and_save(cover, cover.name, song.cover, height=512, width=512, delete_old=True)
             if self.instance:
-                delete_image(self.instance.pfp)
+                delete_image(self.instance.cover)
 
             self.validated_data['cover'] = reshape_and_return_url(cover,
                                                                   cover.name,
                                                                   self.Meta.model.cover.field.upload_to,
-                                                                  height=128,
-                                                                  width=128)
-        return song
+                                                                  height=512,
+                                                                  width=512)
+
+        return super().save(**kwargs)
 
 
 class SongSerializer(serializers.ModelSerializer):
@@ -53,13 +51,22 @@ class SongSerializer(serializers.ModelSerializer):
         read_only_fields = ('created_at', 'updated_at', 'author', 'duration', 'song_file')
 
     def save(self, **kwargs):
+        self.validated_data['author'] = self.context['request'].user
+
         cover = self.validated_data.get('cover')
         self.validated_data.pop('cover', None)
 
         song = super().save(**kwargs)
 
         if cover:
-            reshape_and_save(cover, cover.name, song.cover, height=512, width=512, delete_old=True)
+            if self.instance:
+                delete_image(self.instance.pfp)
+
+            self.validated_data['cover'] = reshape_and_return_url(cover,
+                                                                  cover.name,
+                                                                  self.Meta.model.cover.field.upload_to,
+                                                                  height=512,
+                                                                  width=512)
 
         return song
 

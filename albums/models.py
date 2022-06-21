@@ -16,6 +16,11 @@ class Album(models.Model):
     def __str__(self):
         return f'{self.title} - ({self.id})'
 
+    def delete(self, using=None, keep_parents=False):
+        if self.cover.name != self.cover.field.default:
+            self.cover.delete()
+        return super().delete(using, keep_parents)
+
 
 class AlbumPosition(models.Model):
     album = models.ForeignKey(Album, on_delete=models.CASCADE, related_name='album_positions', editable=False)

@@ -1,3 +1,5 @@
+import os
+
 from django.db import models
 from django.contrib.auth import get_user_model
 
@@ -18,6 +20,10 @@ class Song(models.Model):
         return None
 
     def delete(self, *args, **kwargs):
-        self.song_file.delete()
-        self.cover.delete()
+        if os.path.isfile(self.song_file.path):
+            os.remove(self.song_file.path)
+
+        if self.cover.name != self.cover.field.default:
+            self.cover.delete()
+
         super().delete(*args, **kwargs)

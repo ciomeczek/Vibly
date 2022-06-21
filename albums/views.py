@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404
 
 from .models import Album, AlbumPosition
 from .serializers import AlbumSerializer, \
+    CreateAlbumSerializer, \
     AlbumPositionSerializer, \
     CreateAlbumPositionSerializer
 
@@ -12,7 +13,6 @@ from .serializers import AlbumSerializer, \
 class AlbumsViewSet(viewsets.ModelViewSet):
     lookup_field = 'pk'
     queryset = Album.objects.all()
-    serializer_class = AlbumSerializer
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -35,7 +35,10 @@ class AlbumsViewSet(viewsets.ModelViewSet):
         if album.author != request.user:
             return Response(status=status.HTTP_403_FORBIDDEN)
 
-        serializer = self.get_serializer(album, data=request.data, partial=True)
+        serializer = self.get_serializer(album,
+                                         data=request.data,
+                                         partial=True,
+                                         context=self.get_serializer_context() | {'album': album})
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         return Response(serializer.data)
@@ -48,6 +51,11 @@ class AlbumsViewSet(viewsets.ModelViewSet):
 
         self.perform_destroy(album)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return CreateAlbumSerializer
+        return AlbumSerializer
 
     def get_permissions(self):
         if self.action == 'create' or self.action == 'partial_update':
@@ -69,10 +77,10 @@ class AlbumPositionsViewSet(viewsets.ModelViewSet):
         if album.author != request.user:
             return Response(status=status.HTTP_403_FORBIDDEN)
 
-        serializer = self.get_serializer(data=request.data | {'album_pk': album.pk})
+        serializer = self.get_serializer(data=request.data, context=self.get_serializer_context() | {'album': album})
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def partial_update(self, request, *args, **kwargs):
         album = self.get_album()

@@ -42,8 +42,7 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     def destroy(self, request, *args, **kwargs):
-        user = request.user
-        user.delete()
+        self.perform_destroy(request.user)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get_permissions(self):
