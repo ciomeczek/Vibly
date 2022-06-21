@@ -1,4 +1,6 @@
+import json
 import random
+from pprint import pprint
 
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -30,13 +32,13 @@ class PlaylistCreate:
 
         order = random.randint(-3, playlist.playlist_songs.count())
         data = {
-            'song_pk': song.pk,
+            'song_pk': song.public_id,
             'order': order
         }
 
         data.update(kwargs)
 
-        response = client.post(f'/playlist/{playlist.id}/order/', data, HTTP_AUTHORIZATION='Bearer ' + token)
+        response = client.post(f'/playlist/{playlist.public_id}/order/', data, HTTP_AUTHORIZATION='Bearer ' + token)
 
         return PlaylistSong.objects.filter(playlist=playlist, order=response.data.get('order')).first()
 
@@ -92,7 +94,7 @@ class PlaylistTests(APITestCase):
             "title": "test playlist",
             "playlist_songs": [
                 {
-                    "song_pk": song.pk,
+                    "song_pk": str(song.public_id),
                     "order": i
                 } for i, song in zip([random.randint(-100, 100) for i in range(len(songs))], songs)
             ]
@@ -122,7 +124,7 @@ class PlaylistTests(APITestCase):
             "title": "test playlist",
             "playlist_songs": [
                 {
-                    "song_pk": song.pk,
+                    "song_pk": song.public_id
                 } for song in songs
             ]
         }
@@ -152,7 +154,7 @@ class PlaylistTests(APITestCase):
             'public': True
         }
 
-        response = self.client.patch(f'/playlist/{playlist.id}/', data, HTTP_AUTHORIZATION='Bearer ' + self.token)
+        response = self.client.patch(f'/playlist/{playlist.public_id}/', data, HTTP_AUTHORIZATION='Bearer ' + self.token)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         playlist = Playlist.objects.filter(pk=playlist.id).first()
@@ -166,7 +168,7 @@ class PlaylistTests(APITestCase):
         for i in range(3):
             self.create_playlist_song(playlist=playlist)
 
-        response = self.client.delete(f'/playlist/{playlist.id}/', HTTP_AUTHORIZATION=f'Bearer {self.token}')
+        response = self.client.delete(f'/playlist/{playlist.public_id}/', HTTP_AUTHORIZATION=f'Bearer {self.token}')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Playlist.objects.count(), 0)
         self.assertEqual(PlaylistSong.objects.count(), 0)
@@ -208,11 +210,11 @@ class PlaylistSongTest(APITestCase):
 
         for song, order in zip(songs, orders):
             data = {
-                'song_pk': song.pk,
+                'song_pk': song.public_id,
                 'order': order
             }
 
-            response = self.client.post(f'/playlist/{playlist.pk}/order/',
+            response = self.client.post(f'/playlist/{playlist.public_id}/order/',
                                         data,
                                         HTTP_AUTHORIZATION=f'Bearer {self.token}')
 
@@ -237,7 +239,7 @@ class PlaylistSongTest(APITestCase):
             'order': 3
         }
 
-        response = self.client.patch(f'/playlist/{playlist.pk}/order/{playlist_song.order}/',
+        response = self.client.patch(f'/playlist/{playlist.public_id}/order/{playlist_song.order}/',
                                      data,
                                      HTTP_AUTHORIZATION=f'Bearer {self.token}')
 
@@ -263,7 +265,7 @@ class PlaylistSongTest(APITestCase):
             'order': 6
         }
 
-        response = self.client.patch(f'/playlist/{playlist.pk}/order/{playlist_song.order}/',
+        response = self.client.patch(f'/playlist/{playlist.public_id}/order/{playlist_song.order}/',
                                      data,
                                      HTTP_AUTHORIZATION=f'Bearer {self.token}')
 
@@ -283,9 +285,9 @@ class PlaylistSongTest(APITestCase):
 
         new_song = self.create_song()
         data = {
-            'song_pk': new_song.pk
+            'song_pk': new_song.public_id
         }
-        response = self.client.patch(f'/playlist/{playlist.pk}/order/{playlist_song.order}/',
+        response = self.client.patch(f'/playlist/{playlist.public_id}/order/{playlist_song.order}/',
                                      data,
                                      HTTP_AUTHORIZATION=f'Bearer {self.token}')
 
@@ -302,7 +304,7 @@ class PlaylistSongTest(APITestCase):
 
         playlist_song = self.create_playlist_song(playlist=playlist, order=2)
 
-        response = self.client.delete(f'/playlist/{playlist.pk}/order/{playlist_song.order}/',
+        response = self.client.delete(f'/playlist/{playlist.public_id}/order/{playlist_song.order}/',
                                       HTTP_AUTHORIZATION=f'Bearer {self.token}')
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)

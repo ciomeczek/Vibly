@@ -59,7 +59,7 @@ class SongTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Song.objects.count(), 1)
 
-        song = Song.objects.filter(pk=response.data.get('id')).first()
+        song = Song.objects.filter(public_id=response.data.get('public_id')).first()
         self.assertEqual(song.title, 'test song')
         self.assertEqual(song.author, self.user)
         self.assertTrue(song.song_file is not None)
@@ -87,7 +87,7 @@ class SongTests(APITestCase):
     def test_retrieve_song(self):
         song = self.create_song()
 
-        response = self.client.get(f'/song/{song.id}/', HTTP_AUTHORIZATION=f'Bearer {self.token}')
+        response = self.client.get(f'/song/{song.public_id}/', HTTP_AUTHORIZATION=f'Bearer {self.token}')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data.get('id'), song.id)
         self.assertEqual(response.data.get('title'), song.title)
@@ -99,7 +99,7 @@ class SongTests(APITestCase):
     def test_retrieve_unpublished_song(self):
         song = self.create_song(public=False)
 
-        response = self.client.get(f'/song/{song.id}/')
+        response = self.client.get(f'/song/{song.public_id}/')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_update_song(self):
@@ -110,7 +110,7 @@ class SongTests(APITestCase):
             'public': False
         }
 
-        response = self.client.patch(f'/song/{song.id}/', data, HTTP_AUTHORIZATION=f'Bearer {self.token}')
+        response = self.client.patch(f'/song/{song.public_id}/', data, HTTP_AUTHORIZATION=f'Bearer {self.token}')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         song = Song.objects.filter(pk=song.id).first()
@@ -120,6 +120,6 @@ class SongTests(APITestCase):
     def test_destroy_song(self):
         song = self.create_song()
 
-        response = self.client.delete(f'/song/{song.id}/', HTTP_AUTHORIZATION=f'Bearer {self.token}')
+        response = self.client.delete(f'/song/{song.public_id}/', HTTP_AUTHORIZATION=f'Bearer {self.token}')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Song.objects.count(), 0)

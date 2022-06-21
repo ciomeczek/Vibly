@@ -7,7 +7,7 @@ from .serializers import UserSerializer, CreateUserSerializer
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    lookup_field = 'pk'
+    lookup_field = 'public_id'
     queryset = get_user_model().objects.all()
 
     def create(self, request, *args, **kwargs):

@@ -10,8 +10,8 @@ from vibly.img import reshape_and_return_url, delete_image
 
 class AlbumPositionSerializer(serializers.ModelSerializer):
     song = SongSerializer(read_only=True)
-    song_pk = serializers.PrimaryKeyRelatedField(
-        source='song', read_only=True
+    song_pk = serializers.SlugRelatedField(
+        source='song', read_only=True, slug_field='public_id'
     )
 
     order = serializers.IntegerField(required=False)
@@ -104,7 +104,7 @@ class CreateAlbumPositionListSerializer(serializers.ListSerializer):
     def save(self, **kwargs):
         result = []
         for data in self.validated_data:
-            new_data = {'song_pk': data.get('song').pk}
+            new_data = {'song_pk': data.get('song').public_id}
 
             serializer = self.child.__class__(data=new_data, context=self.context)
             serializer.is_valid(raise_exception=True)
@@ -115,8 +115,8 @@ class CreateAlbumPositionListSerializer(serializers.ListSerializer):
 
 
 class CreateAlbumPositionSerializer(AlbumPositionSerializer):
-    song_pk = serializers.PrimaryKeyRelatedField(
-        queryset=Song.objects.all(), source='song', write_only=True
+    song_pk = serializers.SlugRelatedField(
+        queryset=Song.objects.all(), source='song', write_only=True, slug_field='public_id'
     )
 
     class Meta(AlbumPositionSerializer.Meta):
@@ -130,7 +130,7 @@ class AlbumSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Album
-        fields = ['id', 'title', 'author', 'description', 'cover', 'album_positions', 'created_at', 'public']
+        fields = ['id', 'title', 'author', 'description', 'cover', 'album_positions', 'created_at', 'public', 'public_id']
         read_only_fields = ['author']
 
     def save(self, **kwargs):
@@ -162,7 +162,7 @@ class CreateAlbumSerializer(AlbumSerializer):
         self.context['album'] = self.instance
         if album_positions is not None:
             for album_position in album_positions:
-                album_position['song_pk'] = album_position.pop('song').pk
+                album_position['song_pk'] = album_position.pop('song').public_id
 
             serializer = CreateAlbumPositionSerializer(data=album_positions, context=self.context, many=True)
             serializer.is_valid(raise_exception=True)

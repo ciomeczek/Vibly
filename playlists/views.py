@@ -11,7 +11,7 @@ from .serializers import PlaylistSerializer, \
 
 
 class PlaylistsViewSet(viewsets.ModelViewSet):
-    lookup_field = 'pk'
+    lookup_field = 'public_id'
     queryset = Playlist.objects.all()
 
     def create(self, request, *args, **kwargs):
@@ -63,7 +63,7 @@ class PlaylistsViewSet(viewsets.ModelViewSet):
 
 
 class PlaylistSongsViewSet(viewsets.ModelViewSet):
-    multiple_lookup_fields = {'playlist': 'pk', 'playlist_song': 'playlist_song_order'}
+    multiple_lookup_fields = {'playlist': 'public_id', 'playlist_song': 'playlist_song_order'}
     playlist_queryset = Playlist.objects.all()
     playlist_song_queryset = PlaylistSong.objects.all()
     permission_classes = [IsAuthenticated]
@@ -114,7 +114,7 @@ class PlaylistSongsViewSet(viewsets.ModelViewSet):
     def get_playlist(self):
         playlist_pk_url = self.multiple_lookup_fields.get('playlist')
         playlist_pk = self.kwargs.get(playlist_pk_url)
-        playlist = get_object_or_404(self.playlist_queryset, pk=playlist_pk)
+        playlist = get_object_or_404(self.playlist_queryset, public_id=playlist_pk)
         self.check_object_permissions(self.request, playlist)
         return playlist
 

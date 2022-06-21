@@ -11,7 +11,7 @@ from .serializers import AlbumSerializer, \
 
 
 class AlbumsViewSet(viewsets.ModelViewSet):
-    lookup_field = 'pk'
+    lookup_field = 'public_id'
     queryset = Album.objects.all()
 
     def create(self, request, *args, **kwargs):
@@ -66,7 +66,7 @@ class AlbumsViewSet(viewsets.ModelViewSet):
 
 
 class AlbumPositionsViewSet(viewsets.ModelViewSet):
-    multiple_lookup_fields = {'album': 'pk', 'album_position': 'album_position_order'}
+    multiple_lookup_fields = {'album': 'public_id', 'album_position': 'album_position_order'}
     album_queryset = Album.objects.all()
     album_position_queryset = AlbumPosition.objects.all()
     permission_classes = [IsAuthenticated]
@@ -115,7 +115,7 @@ class AlbumPositionsViewSet(viewsets.ModelViewSet):
     def get_album(self):
         album_pk_url = self.multiple_lookup_fields.get('album')
         album_pk = self.kwargs.get(album_pk_url)
-        album = get_object_or_404(self.album_queryset, pk=album_pk)
+        album = get_object_or_404(self.album_queryset, public_id=album_pk)
         self.check_object_permissions(self.request, album)
         return album
 

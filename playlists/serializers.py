@@ -10,8 +10,8 @@ from vibly.img import reshape_and_return_url, delete_image
 
 class PlaylistSongSerializer(serializers.ModelSerializer):
     song = SongSerializer(read_only=True)
-    song_pk = serializers.PrimaryKeyRelatedField(
-        source='song', read_only=True
+    song_pk = serializers.SlugRelatedField(
+        source='song', read_only=True, slug_field='public_id'
     )
 
     order = serializers.IntegerField(required=False)
@@ -94,7 +94,7 @@ class CreatePlaylistSongListSerializer(serializers.ListSerializer):
     def save(self, **kwargs):
         result = []
         for data in self.validated_data:
-            new_data = {'song_pk': data.get('song').pk}
+            new_data = {'song_pk': data.get('song').public_id}
 
             serializer = self.child.__class__(data=new_data, context=self.context)
             serializer.is_valid(raise_exception=True)
@@ -105,8 +105,8 @@ class CreatePlaylistSongListSerializer(serializers.ListSerializer):
 
 
 class CreatePlaylistSongSerializer(PlaylistSongSerializer):
-    song_pk = serializers.PrimaryKeyRelatedField(
-        queryset=Song.objects.all(), source='song', write_only=True
+    song_pk = serializers.SlugRelatedField(
+        queryset=Song.objects.all(), source='song', write_only=True, slug_field='public_id'
     )
 
     class Meta(PlaylistSongSerializer.Meta):
@@ -123,7 +123,6 @@ class PlaylistSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def save(self, **kwargs):
-        # print(self.validated_data.get('playlist_songs'), self.__class__.__name__)
         self.validated_data['author'] = self.context.get('request').user
 
         cover = self.validated_data.pop('cover', None)
@@ -152,7 +151,7 @@ class CreatePlaylistSerializer(PlaylistSerializer):
         self.context['playlist'] = self.instance
         if playlist_songs is not None:
             for playlist_song in playlist_songs:
-                playlist_song['song_pk'] = playlist_song.pop('song').pk
+                playlist_song['song_pk'] = playlist_song.pop('song').public_id
 
             serializer = CreatePlaylistSongSerializer(data=playlist_songs, context=self.context, many=True)
             serializer.is_valid(raise_exception=True)

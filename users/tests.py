@@ -115,7 +115,7 @@ class UserTests(APITestCase):
 
     def test_retrieve_other_user(self):
         user = self.create_user_dict().get('user')
-        response = self.client.get(f'/user/{user.id}/')
+        response = self.client.get(f'/user/{user.public_id}/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['username'], user.username)

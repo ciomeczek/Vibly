@@ -48,7 +48,7 @@ class SongSerializer(serializers.ModelSerializer):
     class Meta:
         model = Song
         fields = '__all__'
-        read_only_fields = ('created_at', 'updated_at', 'author', 'duration', 'song_file')
+        read_only_fields = ('created_at', 'updated_at', 'author', 'duration', 'song_file', 'public_id')
 
     def save(self, **kwargs):
         self.validated_data['author'] = self.context['request'].user

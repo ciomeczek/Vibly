@@ -29,13 +29,13 @@ class AlbumCreate:
 
         order = random.randint(-3, album.album_positions.count())
         data = {
-            'song_pk': song.pk,
+            'song_pk': song.public_id,
             'order': order
         }
 
         data.update(kwargs)
 
-        response = client.post(f'/album/{album.id}/order/', data, HTTP_AUTHORIZATION='Bearer ' + token, format='json')
+        response = client.post(f'/album/{album.public_id}/order/', data, HTTP_AUTHORIZATION='Bearer ' + token, format='json')
 
         return AlbumPosition.objects.filter(album=album, order=response.data.get('order')).first()
 
@@ -91,7 +91,7 @@ class AlbumTests(APITestCase):
             "title": "test album",
             "album_positions": [
                 {
-                    "song_pk": song.pk,
+                    "song_pk": song.public_id,
                     "order": i
                 } for i, song in zip([random.randint(-2, i + 3) for i in range(len(songs))], songs)
             ]
@@ -122,7 +122,7 @@ class AlbumTests(APITestCase):
             "title": "test album",
             "album_positions": [
                 {
-                    "song_pk": song.pk,
+                    "song_pk": song.public_id,
                 } for song in songs
             ]
         }
@@ -152,7 +152,7 @@ class AlbumTests(APITestCase):
             'public': True
         }
 
-        response = self.client.patch(f'/album/{album.id}/', data, HTTP_AUTHORIZATION='Bearer ' + self.token)
+        response = self.client.patch(f'/album/{album.public_id}/', data, HTTP_AUTHORIZATION='Bearer ' + self.token)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         album = Album.objects.filter(pk=album.id).first()
@@ -166,7 +166,7 @@ class AlbumTests(APITestCase):
         for i in range(3):
             self.create_album_position(album=album)
 
-        response = self.client.delete(f'/album/{album.id}/', HTTP_AUTHORIZATION=f'Bearer {self.token}')
+        response = self.client.delete(f'/album/{album.public_id}/', HTTP_AUTHORIZATION=f'Bearer {self.token}')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Album.objects.count(), 0)
         self.assertEqual(AlbumPosition.objects.count(), 0)
@@ -211,11 +211,11 @@ class AlbumPositionTest(APITestCase):
 
         for song, order in zip(songs, orders):
             data = {
-                'song_pk': song.pk,
+                'song_pk': song.public_id,
                 'order': order
             }
 
-            response = self.client.post(f'/album/{album.pk}/order/',
+            response = self.client.post(f'/album/{album.public_id}/order/',
                                         data,
                                         HTTP_AUTHORIZATION=f'Bearer {self.token}')
 
@@ -235,10 +235,10 @@ class AlbumPositionTest(APITestCase):
         song = self.create_song(user=token)
 
         data = {
-            'song_pk': song.pk,
+            'song_pk': song.public_id,
             'order': 10
         }
-        response = self.client.post(f'/album/{album.pk}/order/',
+        response = self.client.post(f'/album/{album.public_id}/order/',
                                     data,
                                     HTTP_AUTHORIZATION=f'Bearer {token}')
 
@@ -250,17 +250,17 @@ class AlbumPositionTest(APITestCase):
         song = self.create_song()
 
         data = {
-            'song_pk': song.pk,
+            'song_pk': song.public_id,
             'order': 10
         }
 
-        response = self.client.post(f'/album/{album.pk}/order/',
+        response = self.client.post(f'/album/{album.public_id}/order/',
                                     data,
                                     HTTP_AUTHORIZATION=f'Bearer {self.token}')
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        response = self.client.post(f'/album/{album.pk}/order/',
+        response = self.client.post(f'/album/{album.public_id}/order/',
                                     data,
                                     HTTP_AUTHORIZATION=f'Bearer {self.token}')
 
@@ -279,7 +279,7 @@ class AlbumPositionTest(APITestCase):
             'order': 3
         }
 
-        response = self.client.patch(f'/album/{album.pk}/order/{album_position.order}/',
+        response = self.client.patch(f'/album/{album.public_id}/order/{album_position.order}/',
                                      data,
                                      HTTP_AUTHORIZATION=f'Bearer {self.token}')
 
@@ -305,7 +305,7 @@ class AlbumPositionTest(APITestCase):
             'order': 6
         }
 
-        response = self.client.patch(f'/album/{album.pk}/order/{album_position.order}/',
+        response = self.client.patch(f'/album/{album.public_id}/order/{album_position.order}/',
                                      data,
                                      HTTP_AUTHORIZATION=f'Bearer {self.token}')
 
@@ -325,10 +325,10 @@ class AlbumPositionTest(APITestCase):
 
         new_song = self.create_song()
         data = {
-            'song_pk': new_song.pk
+            'song_pk': new_song.public_id
         }
 
-        response = self.client.patch(f'/album/{album.pk}/order/{album_position.order}/',
+        response = self.client.patch(f'/album/{album.public_id}/order/{album_position.order}/',
                                      data,
                                      HTTP_AUTHORIZATION=f'Bearer {self.token}')
 
@@ -345,7 +345,7 @@ class AlbumPositionTest(APITestCase):
 
         album_position = self.create_album_position(album=album, order=2)
 
-        response = self.client.delete(f'/album/{album.pk}/order/{album_position.order}/',
+        response = self.client.delete(f'/album/{album.public_id}/order/{album_position.order}/',
                                       HTTP_AUTHORIZATION=f'Bearer {self.token}')
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)

@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.db.models import F
@@ -6,6 +8,7 @@ from songs.models import Song
 
 
 class Playlist(models.Model):
+    public_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     title = models.CharField(max_length=255)
     author = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
     cover = models.ImageField(upload_to='playlists/covers/', blank=True, default='defaults/playlists/default.png')

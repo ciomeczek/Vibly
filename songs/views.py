@@ -7,7 +7,7 @@ from .models import Song
 
 
 class SongViewSet(viewsets.ModelViewSet):
-    lookup_url_kwarg = 'song_pk'
+    lookup_field = 'public_id'
     queryset = Song.objects.all()
     serializer_class = SongSerializer
 
