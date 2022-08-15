@@ -120,7 +120,7 @@ class PlaylistSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Playlist
-        fields = '__all__'
+        fields = ['public_id', 'title', 'author', 'playlist_songs', 'cover', 'description', 'public', 'created_at']
 
     def save(self, **kwargs):
         self.validated_data['author'] = self.context.get('request').user

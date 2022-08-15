@@ -14,8 +14,8 @@ class CreateSongSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Song
-        fields = '__all__'
-        read_only_fields = ('id', 'created_at', 'updated_at', 'author', 'duration')
+        fields = ['public_id', 'title', 'author', 'song_file', 'duration', 'cover', 'public', 'created_at']
+        read_only_fields = ('id', 'public_id', 'created_at', 'updated_at', 'author', 'duration')
 
     def save(self, **kwargs):
         self.validated_data['song_file'].name = get_renamed_filename(self.validated_data['song_file'].name)
@@ -47,7 +47,7 @@ class SongSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Song
-        fields = '__all__'
+        fields = ['public_id', 'title', 'author', 'song_file', 'duration', 'cover', 'public', 'created_at']
         read_only_fields = ('created_at', 'updated_at', 'author', 'duration', 'song_file', 'public_id')
 
     def save(self, **kwargs):

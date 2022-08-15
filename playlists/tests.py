@@ -81,7 +81,7 @@ class PlaylistTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Playlist.objects.count(), 1)
 
-        playlist = Playlist.objects.filter(pk=response.data.get('id')).first()
+        playlist = Playlist.objects.filter(public_id=response.data.get('public_id')).first()
         self.assertEqual(playlist.title, 'test playlist')
         self.assertEqual(playlist.author, self.user)
         self.assertTrue(playlist.public)
@@ -103,7 +103,7 @@ class PlaylistTests(APITestCase):
         response = self.client.post('/playlist/', data, HTTP_AUTHORIZATION='Bearer ' + self.token, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        playlist = Playlist.objects.filter(pk=response.data.get('id')).first()
+        playlist = Playlist.objects.filter(public_id=response.data.get('public_id')).first()
         self.assertEqual(playlist.title, 'test playlist')
         self.assertEqual(playlist.author, self.user)
         self.assertFalse(playlist.public)
@@ -132,7 +132,7 @@ class PlaylistTests(APITestCase):
         response = self.client.post('/playlist/', data, HTTP_AUTHORIZATION='Bearer ' + self.token, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        playlist = Playlist.objects.filter(pk=response.data.get('id')).first()
+        playlist = Playlist.objects.filter(public_id=response.data.get('public_id')).first()
         self.assertEqual(playlist.title, 'test playlist')
         self.assertEqual(playlist.author, self.user)
         self.assertFalse(playlist.public)

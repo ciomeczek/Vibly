@@ -78,7 +78,7 @@ class AlbumTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Album.objects.count(), 1)
 
-        album = Album.objects.filter(pk=response.data.get('id')).first()
+        album = Album.objects.filter(public_id=response.data.get('public_id')).first()
         self.assertEqual(album.title, 'test album')
         self.assertEqual(album.author, self.user)
         self.assertTrue(album.public)
@@ -101,7 +101,7 @@ class AlbumTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        album = Album.objects.filter(pk=response.data.get('id')).first()
+        album = Album.objects.filter(public_id=response.data.get('public_id')).first()
         self.assertEqual(album.title, 'test album')
         self.assertEqual(album.author, self.user)
         self.assertFalse(album.public)
@@ -130,7 +130,7 @@ class AlbumTests(APITestCase):
         response = self.client.post('/album/', data, HTTP_AUTHORIZATION='Bearer ' + self.token, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        album = Album.objects.filter(pk=response.data.get('id')).first()
+        album = Album.objects.filter(public_id=response.data.get('public_id')).first()
         self.assertEqual(album.title, 'test album')
         self.assertEqual(album.author, self.user)
         self.assertFalse(album.public)

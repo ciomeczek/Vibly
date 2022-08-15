@@ -26,7 +26,7 @@ class SongCreate:
         data.update(kwargs)
 
         song = client.post('/song/', data, HTTP_AUTHORIZATION=f'Bearer {token}')
-        return Song.objects.filter(pk=song.data.get('id')).first()
+        return Song.objects.filter(public_id=song.data.get('public_id')).first()
 
 
 class SongTests(APITestCase):
@@ -89,9 +89,9 @@ class SongTests(APITestCase):
 
         response = self.client.get(f'/song/{song.public_id}/', HTTP_AUTHORIZATION=f'Bearer {self.token}')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data.get('id'), song.id)
+        self.assertEqual(response.data.get('public_id'), str(song.public_id))
         self.assertEqual(response.data.get('title'), song.title)
-        self.assertEqual(response.data.get('author').get('id'), song.author.id)
+        self.assertEqual(response.data.get('author').get('public_id'), str(song.author.public_id))
         self.assertEqual(response.data.get('public'), song.public)
         self.assertEqual(response.data.get('duration')[1:], str(song.duration))
         self.assertEqual(response.data.get('created_at'), song.created_at.isoformat())

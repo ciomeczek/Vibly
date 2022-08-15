@@ -8,7 +8,7 @@ from vibly.img import reshape_and_return_url, delete_image
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'pfp', 'public_id']
+        fields = ['public_id', 'username', 'email', 'first_name', 'last_name', 'pfp']
         read_only_fields = ['id', 'username', 'email']
 
     def validate_password(self, password):
@@ -43,5 +43,5 @@ class UserSerializer(serializers.ModelSerializer):
 class CreateUserSerializer(UserSerializer):
     class Meta:
         model = get_user_model()
-        fields = ['id', 'username', 'password', 'email', 'first_name', 'last_name', 'pfp', 'public_id']
+        fields = ['public_id', 'username', 'password', 'email', 'first_name', 'last_name', 'pfp', 'public_id']
         extra_kwargs = {'password': {'write_only': True}}

@@ -130,7 +130,7 @@ class AlbumSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Album
-        fields = ['id', 'title', 'author', 'description', 'cover', 'album_positions', 'created_at', 'public', 'public_id']
+        fields = ['title', 'author', 'description', 'cover', 'album_positions', 'created_at', 'public', 'public_id']
         read_only_fields = ['author']
 
     def save(self, **kwargs):
